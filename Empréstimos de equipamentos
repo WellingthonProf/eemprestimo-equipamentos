@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empréstimo de Equipamentos - Tech</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a2e;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2,
+        h3 {
+            color: #00d4ff;
+        }
+
+        label,
+        input {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            background-color: #162447;
+            color: #e0e0e0;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            background-color: #00d4ff;
+            color: #1a1a2e;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #00a3cc;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #162447;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #00d4ff;
+        }
+
+        .available {
+            background-color: #00d4ff;
+            color: #1a1a2e;
+        }
+
+        .unavailable {
+            background-color: #cc0000;
+            color: white;
+        }
+
+        .selected {
+            border: 3px solid #ffcc00;
+        }
+
+        #loanTable thead {
+            background-color: #1a1a2e;
+            color: #00d4ff;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #00d4ff;
+        }
+
+        .filter-input {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Empréstimo de Equipamentos - Tecnologia</h2>
+
+    <form id="loanForm">
+        <label for="professor">Nome do Professor:</label>
+        <input type="text" id="professor" required>
+
+        <label for="classroom">Sala de Aula:</label>
+        <input type="text" id="classroom" required>
+
+        <h3>Selecione os Equipamentos</h3>
+        <table id="equipmentTable">
+            <!-- A tabela será gerada dinamicamente -->
+        </table>
+
+        <button type="button" onclick="registerLoan()">Registrar Empréstimo</button>
+    </form>
+
+    <h3>Empréstimos Registrados</h3>
+    <table border="1" id="loanTable">
+        <thead>
+            <tr>
+                <th>Quantidade de Equipamentos</th>
+                <th>Equipamento</th>
+                <th>Professor</th>
+                <th>Sala</th>
+                <th>Data e Hora de Empréstimo</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>Histórico de Empréstimos</h3>
+    <input type="text" id="searchProfessor" class="filter-input" placeholder="Pesquisar por nome do professor..." oninput="filterHistory()">
+    <button type="button" onclick="clearHistory()">Limpar Histórico</button>
+
+    <table border="1" id="historyTable">
+        <thead>
+            <tr>
+                <th>Quantidade de Equipamentos</th>
+                <th>Equipamento</th>
+                <th>Professor</th>
+                <th>Sala</th>
+                <th>Data e Hora de Empréstimo</th>
+                <th>Data e Hora de Devolução</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="footer">
+        <p>Sistema de Gerenciamento de Equipamentos - Tema Tecnologia</p>
+    </div>
+
+    <script>
+        const totalEquipments = 23;  // Número total de equipamentos (1 a 23)
+        let selectedEquipments = []; // Array para armazenar os equipamentos selecionados
+
+        // Função para gerar a tabela de botões de equipamentos
+        function generateEquipmentButtons() {
+            const table = document.getElementById("equipmentTable");
+            table.innerHTML = ''; // Limpar a tabela antes de gerar
+
+            let row;
+            for (let i = 1; i <= totalEquipments; i++) {
+                if ((i - 1) % 5 === 0) { // Criar uma nova linha a cada 5 botões
+                    row = document.createElement('tr');
+                    table.appendChild(row);
+                }
+
+                const cell = document.createElement('td');
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.id = `equipment-${i}`;  // Adicionar um id para cada botão
+
+                // Checar se o equipamento já está emprestado
+                const loans = JSON.parse(localStorage.getItem('loans')) || [];
+                const isUnavailable = loans.some(loan => loan.equipment === i);
+
+                if (isUnavailable) {
+                    button.classList.add('unavailable');  // Vermelho se já estiver emprestado
+                    button.disabled = true;  // Desabilitar botão se já estiver emprestado
+                } else {
+                    button.classList.add('available');  // Verde se estiver disponível
+                    button.onclick = () => toggleEquipmentSelection(i);
+                }
+
+                cell.appendChild(button);
+                row.appendChild(cell);
+            }
+        }
+
+        // Função para alternar a seleção de um equipamento
+        function toggleEquipmentSelection(equipmentNumber) {
+            const index = selectedEquipments.indexOf(equipmentNumber);
+            const button = document.getElementById(`equipment-${equipmentNumber}`);
+
+            if (index > -1) {  // Se o equipamento já estiver selecionado
+                selectedEquipments.splice(index, 1);  // Remover da lista de selecionados
+                button.classList.remove('selected');
+            } else {
+                selectedEquipments.push(equipmentNumber);  // Adicionar à lista de selecionados
+                button.classList.add('selected');
+            }
+        }
+
+        // Função para registrar um novo empréstimo
+        function registerLoan() {
+            const professor = document.getElementById("professor").value;
+            const classroom = document.getElementById("classroom").value;
+            const date = new Date().toLocaleString();  // Data e hora atual
+
+            if (selectedEquipments.length === 0) {
+                alert("Por favor, selecione ao menos um equipamento.");
+                return;
+            }
+
+            selectedEquipments.forEach(equipment => {
+                const loanData = {
+                    equipment: equipment,
+                    professor: professor,
+                    classroom: classroom,
+                    date: date,
+                    returnDate: null // Inicialmente, sem data de devolução
+                };
+
+                // Salvar no LocalStorage (empréstimos ativos)
+                let loans = JSON.parse(localStorage.getItem('loans')) || [];
+                loans.push(loanData);
+                localStorage.setItem('loans', JSON.stringify(loans));
+
+                // Salvar também no histórico (pasta de histórico)
+                let history = JSON.parse(localStorage.getItem('history')) || [];
+                history.push(loanData);
+                localStorage.setItem('history', JSON.stringify(history));
+            });
+
+            // Limpar a seleção e o formulário
+            selectedEquipments = [];
+            document.querySelectorAll('button.selected').forEach(button => button.classList.remove('selected'));
+
+            // Atualizar a tabela e a cor dos botões
+            renderTable();
+            generateEquipmentButtons();
+            renderHistory();
+        }
+
+        // Função para renderizar a tabela com os empréstimos
+        function renderTable() {
+            const loans = JSON.parse(localStorage.getItem('loans')) || [];
+            const tableBody = document.getElementById("loanTable").getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';  // Limpar a tabela
+
+            loans.forEach(loan => {
+                const newRow = tableBody.insertRow();
+                newRow.innerHTML = `
+                    <td>1</td>
+                    <td>${loan.equipment}</td>
+                    <td>${loan.professor}</td>
+                    <td>${loan.classroom}</td>
+                    <td>${loan.date}</td>
+                    <td><button
+    // Função para devolver um equipamento
+    function returnEquipment(equipment) {
+        let loans = JSON.parse(localStorage.getItem('loans')) || [];
+        loans = loans.filter(loan => loan.equipment !== equipment);
+        localStorage.setItem('loans', JSON.stringify(loans));
+
+        // Atualizar a tabela de empréstimos e a disponibilidade dos botões
+        renderTable();
+        generateEquipmentButtons();
+    }
+
+    // Função para filtrar o histórico de empréstimos
+    function filterHistory() {
+        const searchValue = document.getElementById("searchProfessor").value.toLowerCase();
+        const history = JSON.parse(localStorage.getItem('history')) || [];
+        const filteredHistory = history.filter(loan => loan.professor.toLowerCase().includes(searchValue));
+        renderFilteredHistory(filteredHistory);
+    }
+
+    // Função para renderizar o histórico filtrado
+    function renderFilteredHistory(filteredHistory) {
+        const tableBody = document.getElementById("historyTable").getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = ''; // Limpar a tabela
+
+        filteredHistory.forEach(loan => {
+            const newRow = tableBody.insertRow();
+            newRow.innerHTML = `
+                <td>1</td>
+                <td>${loan.equipment}</td>
+                <td>${loan.professor}</td>
+                <td>${loan.classroom}</td>
+                <td>${loan.date}</td>
+                <td>${loan.returnDate || 'Não devolvido'}</td>`;
+        });
+    }
+
+    // Função para limpar o histórico
+    function clearHistory() {
+        localStorage.removeItem('history');
+        renderHistory();
+    }
+
+    // Função para renderizar o histórico de empréstimos
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('history')) || [];
+        const tableBody = document.getElementById("historyTable").getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = ''; // Limpar a tabela
+
+        history.forEach(loan => {
+            const newRow = tableBody.insertRow();
+            newRow.innerHTML = `
+                <td>1</td>
+                <td>${loan.equipment}</td>
+                <td>${loan.professor}</td>
+                <td>${loan.classroom}</td>
+                <td>${loan.date}</td>
+                <td>${loan.returnDate || 'Não devolvido'}</td>`;
+        });
+    }
+
+    // Chamar a função para gerar os botões ao carregar a página
+    window.onload = () => {
+        generateEquipmentButtons();
+        renderTable();
+        renderHistory();
+    };
+</script>
